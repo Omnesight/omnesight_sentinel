@@ -1,0 +1,12 @@
+{
+  "corridor": "Escravos-Lagos Pipeline System (ELPS) - Western Grid",
+  "node_id": "ELPS-SECTOR-12B-VALVE-12",
+  "timestamp": 1792948800,
+  "current_pressure_bar": 54.8,
+  "nominal_pressure_bar": 59.0,
+  "pressure_drop_rate_bar_per_min": 0.45,
+  "flow_rate_m3h": 26400,
+  "gas_temperature_celsius": 31.4,
+  "vibration_rms_g": 3.82,
+  "status_flag": "WARNING_HIGH_GRADIENT_DROP"
+}
