@@ -23,8 +23,9 @@ _load_env_file()
 
 """
 Meta Model API & Llama Stack Client Adapter for Omnesight Sentinel
-Connects to official Meta Model API (api.meta.ai) with Muse Spark & Llama models
-Includes resilient fallback for offline execution / local testing.
+Connects to official Meta Model API (api.meta.ai) with Muse Spark models.
+Provides explicit enterprise error handling for Quota Exhaustion (429), Network Drops,
+and Authentication Failures — with strict Zero-Trust integrity.
 """
 
 import os
@@ -35,6 +36,34 @@ from typing import Dict, Any, List, Optional
 import requests
 
 logger = logging.getLogger("Omnesight.MetaModelAPI")
+
+class MetaAPIError(Exception):
+    """Base exception for Meta Model API interactions."""
+    def __init__(self, message: str, status_code: Optional[int] = None, error_code: Optional[str] = None):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+        self.error_code = error_code or "META_API_ERROR"
+
+class MetaQuotaExceededError(MetaAPIError):
+    """Raised when tokens or credits are exhausted or rate limits are hit (HTTP 429)."""
+    def __init__(self, message: str = "Meta Model API token quota exhausted or rate limit reached (HTTP 429). Please check dev.meta.ai/usage."):
+        super().__init__(message, status_code=429, error_code="META_QUOTA_EXHAUSTED")
+
+class MetaConnectionError(MetaAPIError):
+    """Raised when the Internet connection is down or api.meta.ai is unreachable."""
+    def __init__(self, message: str = "Network unreachable: Failed to connect to api.meta.ai. Check your Internet connection."):
+        super().__init__(message, status_code=0, error_code="NETWORK_UNREACHABLE")
+
+class MetaAuthenticationError(MetaAPIError):
+    """Raised when API key is missing, invalid or unauthorized (HTTP 401/403)."""
+    def __init__(self, message: str = "Invalid or unauthorized Meta Model API key (HTTP 401/403). Check META_LLM_KEY in .env."):
+        super().__init__(message, status_code=401, error_code="META_AUTH_FAILED")
+
+class MetaTimeoutError(MetaAPIError):
+    """Raised when inference takes longer than timeout window."""
+    def __init__(self, message: str = "Meta Model API timeout: Cluster did not respond within timeout window."):
+        super().__init__(message, status_code=408, error_code="META_TIMEOUT")
 
 def _load_env_file():
     env_path = Path(__file__).resolve().parent.parent.parent / ".env"
@@ -51,24 +80,33 @@ _load_env_file()
 
 class LlamaStackClientAdapter:
     """
-    Adapter interfacing with the official Meta Model API (https://api.meta.ai/v1)
-    and Meta Llama Stack with resilient fallback.
+    Adapter interfacing directly with the official Meta Model API (https://api.meta.ai/v1/responses).
+    Strictly raises domain exceptions for quota exhaustion, network disconnects, and auth failures.
     """
 
-    def __init__(self, endpoint_url: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        endpoint_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        allow_fallback: bool = False
+    ):
         _load_env_file()
         self.api_key = api_key or os.getenv("META_LLM_KEY") or os.getenv("LLAMA_STACK_API_KEY", "")
         self.endpoint_url = endpoint_url or os.getenv("LLAMA_STACK_ENDPOINT", "https://api.meta.ai/v1")
         self.model_name = os.getenv("META_MODEL", "muse-spark-1.3")
         self.has_live_endpoint = bool(self.api_key and "internal" not in self.endpoint_url)
+        # allow_fallback is strictly False in production/demo so true errors are never masked
+        self.allow_fallback = allow_fallback or os.getenv("ALLOW_OFFLINE_FALLBACK", "0") == "1"
 
-    def _call_meta_model_api(self, prompt: str, target_model: str) -> Optional[Dict[str, Any]]:
+    def _call_meta_model_api(self, prompt: str, target_model: str) -> Dict[str, Any]:
         """
         Executes real inference call against Meta Model API (https://api.meta.ai/v1/responses).
-        Consumes tokens and registers on Meta Developer platform dashboard.
+        Raises explicit exceptions if tokens are exhausted, network is down, or auth fails.
         """
-        if not self.has_live_endpoint or not self.api_key:
-            return None
+        if not self.api_key:
+            if self.allow_fallback:
+                return {}
+            raise MetaAuthenticationError("META_LLM_KEY is missing or empty in environment. Add it to .env.")
 
         base = self.endpoint_url.rstrip("/")
         url = f"{base}/responses" if not base.endswith("/responses") else base
@@ -77,7 +115,6 @@ class LlamaStackClientAdapter:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        # In Meta Model API, active models include muse-spark-1.3, muse-spark-1.2, muse-spark-open
         model_to_use = self.model_name if "llama" in target_model.lower() or not target_model else target_model
 
         payload = {
@@ -88,25 +125,127 @@ class LlamaStackClientAdapter:
 
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=25)
-            if resp.status_code == 200:
-                data = resp.json()
-                usage = data.get("usage", {})
-                for item in data.get("output", []):
-                    if item.get("type") == "message":
-                        for c in item.get("content", []):
-                            txt = c.get("text", "")
-                            if txt:
-                                parsed = json.loads(txt)
-                                parsed["live_api_called"] = True
-                                parsed["meta_usage"] = usage
-                                parsed["model_used"] = model_to_use
-                                return parsed
-            else:
-                logger.warning(f"Meta Model API returned HTTP {resp.status_code}: {resp.text[:200]}")
+        except requests.exceptions.Timeout as e:
+            if self.allow_fallback:
+                logger.warning(f"Timeout fallback: {e}")
+                return {}
+            raise MetaTimeoutError(f"Meta Model API request timed out after 25s: {e}") from e
+        except requests.exceptions.ConnectionError as e:
+            if self.allow_fallback:
+                logger.warning(f"ConnectionError fallback: {e}")
+                return {}
+            raise MetaConnectionError("Unable to reach https://api.meta.ai: Network unreachable or Internet connection offline.") from e
         except Exception as e:
-            logger.warning(f"Meta Model API live call failed ({e}), falling back to deterministic payload.")
+            if self.allow_fallback:
+                logger.warning(f"Unexpected request error fallback: {e}")
+                return {}
+            raise MetaAPIError(f"Meta Model API request error: {e}") from e
 
-        return None
+        # Analyze HTTP Status Code
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"raw": resp.text}
+
+            usage = {}
+            if isinstance(data, dict):
+                usage = data.get("usage", {})
+
+            # Extract output text robustly from any response shape (dict, list, string)
+            extracted_text = ""
+            if isinstance(data, dict):
+                output_list = data.get("output", [])
+                if isinstance(output_list, list):
+                    for item in output_list:
+                        if isinstance(item, dict):
+                            raw_content = item.get("content", "")
+                            if isinstance(raw_content, str):
+                                extracted_text += raw_content
+                            elif isinstance(raw_content, list):
+                                for c in raw_content:
+                                    if isinstance(c, dict):
+                                        extracted_text += c.get("text", "") or c.get("value", "") or ""
+                                    elif isinstance(c, str):
+                                        extracted_text += c
+                        elif isinstance(item, str):
+                            extracted_text += item
+                elif isinstance(output_list, str):
+                    extracted_text = output_list
+
+                # Fallback to standard OpenAI message format if present
+                if not extracted_text:
+                    choices = data.get("choices", [])
+                    if isinstance(choices, list) and len(choices) > 0:
+                        first = choices[0]
+                        if isinstance(first, dict):
+                            msg = first.get("message", {})
+                            if isinstance(msg, dict):
+                                extracted_text = msg.get("content", "")
+                            elif isinstance(msg, str):
+                                extracted_text = msg
+
+            if extracted_text:
+                clean_txt = extracted_text.strip()
+                # Strip markdown code blocks if the model wrapped JSON in ```json ... ```
+                if clean_txt.startswith("```json"):
+                    clean_txt = clean_txt[7:]
+                elif clean_txt.startswith("```"):
+                    clean_txt = clean_txt[3:]
+                if clean_txt.endswith("```"):
+                    clean_txt = clean_txt[:-3]
+                clean_txt = clean_txt.strip()
+
+                parsed = None
+                try:
+                    parsed = json.loads(clean_txt)
+                except Exception:
+                    # Attempt to extract embedded JSON object between { and }
+                    start_idx = clean_txt.find("{")
+                    end_idx = clean_txt.rfind("}")
+                    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                        try:
+                            parsed = json.loads(clean_txt[start_idx:end_idx + 1])
+                        except Exception:
+                            pass
+
+                if not isinstance(parsed, dict):
+                    parsed = {"raw_response": extracted_text}
+
+                parsed["live_api_called"] = True
+                parsed["meta_usage"] = usage
+                parsed["model_used"] = model_to_use
+                return parsed
+
+            raise MetaAPIError("Meta Model API returned 200 OK but response structure was empty or unparseable.")
+
+        elif resp.status_code == 429:
+            msg = f"Meta Token Quota Exhausted (HTTP 429): Your inference credits or token allocation on dev.meta.ai are exhausted. Details: {resp.text[:200]}"
+            logger.error(msg)
+            if self.allow_fallback:
+                return {}
+            raise MetaQuotaExceededError(msg)
+
+        elif resp.status_code in (401, 403):
+            msg = f"Meta Authentication Failed (HTTP {resp.status_code}): Invalid API key or access denied. Details: {resp.text[:200]}"
+            logger.error(msg)
+            if self.allow_fallback:
+                return {}
+            raise MetaAuthenticationError(msg)
+
+        elif resp.status_code >= 500:
+            msg = f"Meta Service Outage (HTTP {resp.status_code}): Meta servers are temporarily unavailable."
+            logger.error(msg)
+            if self.allow_fallback:
+                return {}
+            raise MetaAPIError(msg, status_code=resp.status_code)
+
+        else:
+            msg = f"Unexpected Meta Model API Error (HTTP {resp.status_code}): {resp.text[:200]}"
+            logger.error(msg)
+            if self.allow_fallback:
+                return {}
+            raise MetaAPIError(msg, status_code=resp.status_code)
 
     def analyze_multimodal_telemetry(
         self,
@@ -115,8 +254,8 @@ class LlamaStackClientAdapter:
         model: str = "muse-spark-1.3"
     ) -> Dict[str, Any]:
         """
-        Runs multimodal anomaly detection using Meta Model API (Muse Spark / Llama 3.2 Vision)
-        on sensor telemetry + optical feeds.
+        Runs multimodal anomaly detection using Meta Model API (Muse Spark).
+        Raises MetaQuotaExceededError if tokens are exhausted or MetaConnectionError if offline.
         """
         prompt = f"""
         [ROLE: TIER-1 INFRASTRUCTURE & SCADA DIAGNOSTIC SPECIALIST - META MODEL API]
@@ -155,12 +294,11 @@ class LlamaStackClientAdapter:
         }}
         """
 
-        # 1. Attempt live Meta Model API call
-        live_result = self._call_meta_model_api(prompt, model)
-        if live_result and "recommended_action" in live_result and "root_cause_diagnosis" in live_result:
-            return live_result
+        result = self._call_meta_model_api(prompt, model)
+        if result and "recommended_action" in result and "root_cause_diagnosis" in result:
+            return result
 
-        # 2. Resilient fallback for sandbox tests and zero-network environments
+        # Only reached if allow_fallback=True was explicitly requested
         return {
             "model_used": model,
             "anomaly_detected": True,
@@ -198,7 +336,7 @@ class LlamaStackClientAdapter:
     ) -> Dict[str, Any]:
         """
         Evaluates financial penalties (Take-or-Pay, SBLC) impacted by the physical incident
-        using Meta Model API.
+        using Meta Model API. Raises explicit errors if tokens are exhausted or network is down.
         """
         prompt = f"""
         [ROLE: SOVEREIGN CONTRACT & FINANCIAL RISK AGENT - META MODEL API]
@@ -220,12 +358,11 @@ class LlamaStackClientAdapter:
         }}
         """
 
-        # 1. Attempt live Meta Model API call
-        live_result = self._call_meta_model_api(prompt, model)
-        if live_result and "estimated_loss_prevented_usd" in live_result and "counterparty" in live_result:
-            return live_result
+        result = self._call_meta_model_api(prompt, model)
+        if result and "estimated_loss_prevented_usd" in result and "counterparty" in result:
+            return result
 
-        # 2. Resilient fallback
+        # Only reached if allow_fallback=True was explicitly requested
         return {
             "model_used": model,
             "counterparty": contract_data.get("counterparty", "NNPC / Gas Aggregator"),

@@ -20,8 +20,14 @@ wheels/
 .installed.cfg
 *.egg
 .env
+.env.local
 .venv
 venv/
 ENV/
 .DS_Store
 .pytest_cache/
+
+# Local runtime data & logs
+data/*.jsonl
+architect
+*.log

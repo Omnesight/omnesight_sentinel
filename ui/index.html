@@ -1034,6 +1034,16 @@
     function updateUI(state) {
       const status = state.status;
       const env = state.envelope;
+      currentEnvelope = env;
+
+      if (state.ledger_info) {
+        const bCount = state.ledger_info.block_count;
+        const verified = state.ledger_info.integrity_verified ? 'ZERO DRIFT VERIFIED' : 'INTEGRITY WARNING';
+        const proofEl = document.getElementById('ledgerProof');
+        if (proofEl && (!env || status !== 'EXECUTED')) {
+          proofEl.innerText = `ACTIVE // BLOCKS: ${bCount} // ${verified}`;
+        }
+      }
 
       const runtimeStatus = document.getElementById('runtimeStatus');
       const envelopeBadge = document.getElementById('envelopeStatusBadge');
@@ -1149,22 +1159,69 @@
         `;
         document.getElementById('ledgerProof').innerText = 'TAMPER BLOCKED // ZERO EXECUTION';
       }
+      else if (status === 'API_ERROR') {
+        runtimeStatus.className = 'status-pill status-tampered';
+        runtimeStatus.innerText = 'META API ERROR';
+        envelopeBadge.className = 'status-pill status-tampered';
+        envelopeBadge.innerText = 'DIAGNOSIS ABORTED';
+        btnApprove.disabled = true;
+        btnTamper.disabled = false;
+        btnRun.disabled = false;
+
+        document.getElementById('stepVision').className = 'timeline-step';
+        document.getElementById('textVision').innerHTML = `
+          <strong style="color: var(--accent-coral);">API DIAGNOSTIC INTERRUPTED</strong><br>
+          Request to <code>api.meta.ai</code> could not be completed.
+        `;
+
+        document.getElementById('stepRisk').className = 'timeline-step';
+        document.getElementById('textRisk').innerHTML = `
+          <strong style="color: var(--accent-coral);">FINANCIAL RISK AGENT HALTED</strong><br>
+          Contractual liability assessment halted due to Meta API failure.
+        `;
+
+        document.getElementById('stepOrchestrator').className = 'timeline-step';
+        document.getElementById('textOrchestrator').innerHTML = `
+          <strong style="color: var(--accent-coral);">ZERO-TRUST ENVELOPE SAFEGUARD</strong><br>
+          No action proposed: Zero-Trust protocol integrity strictly preserved.
+        `;
+
+        document.getElementById('actionSummary').innerHTML = `
+          <strong style="color: var(--accent-coral);">META MODEL API FAILURE</strong><br>
+          ${state.error_message || 'Error communicating with api.meta.ai'}
+        `;
+
+        document.getElementById('auditFeedback').innerHTML = `
+          <span style="color: var(--accent-coral); font-weight: 700;">🚨 OPERATIONAL ALERT: META MODEL FAILURE</span><br>
+          <span style="color: var(--text-sub);">${state.error_message || 'Token quota exceeded or network connection offline.'}</span>
+        `;
+        document.getElementById('ledgerProof').innerText = 'ALERT // INCIDENT RECORDED';
+      }
     }
 
     async function runDiagnosis() {
       const btn = document.getElementById('btnRunDiagnosis');
-      btn.innerText = 'Analyzing with Meta Llama 3.2...';
+      btn.innerText = 'Analyzing with Meta Muse Spark 1.3...';
+      btn.disabled = true;
       try {
         const res = await fetch('/api/run-diagnosis', { method: 'POST' });
         const data = await res.json();
-        updateUI(data.state);
+        if (data.state) {
+          updateUI(data.state);
+        }
+      } catch (err) {
+        console.error('Diagnostic error:', err);
       } finally {
         btn.innerText = '⚡ Run Multi-Agent Diagnostic';
+        btn.disabled = false;
       }
     }
 
     let selectedAuthMethod = 'bio';
     let isBiometricScanned = false;
+    let currentEnvelope = null;
+    let currentChallengeId = null;
+    let currentChallengeNonce = null;
 
     function openAuthModal() {
       const modal = document.getElementById('authModal');
@@ -1233,8 +1290,15 @@
       badge.innerText = 'PROMPTING...';
 
       try {
-        const challenge = new Uint8Array(32);
-        window.crypto.getRandomValues(challenge);
+        // Retrieve server-side cryptographic challenge nonce (P1: Anti-Replay Challenge Gating)
+        const actId = currentEnvelope ? currentEnvelope.action_id : '';
+        const chalRes = await fetch(`/api/auth/challenge?action_id=${encodeURIComponent(actId)}`);
+        const chalData = await chalRes.json();
+        currentChallengeId = chalData.challenge_id;
+        currentChallengeNonce = chalData.challenge_nonce;
+
+        // Convert 64-character hex nonce into 32-byte Uint8Array for WebAuthn
+        const challenge = new Uint8Array(currentChallengeNonce.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
         const userId = new Uint8Array(16);
         window.crypto.getRandomValues(userId);
 
@@ -1358,14 +1422,9 @@
       const btn = document.getElementById('btnSignAuthorize');
       const prevText = btn.innerHTML;
 
-      let payload = {
-        supervisor: supervisor,
-        token_id: 'YK-FIDO2-84920A'
-      };
-
       if (selectedAuthMethod === 'bio') {
-        if (!isBiometricScanned) {
-          // Immediately prompt Touch ID directly upon clicking Sign & Dispatch
+        if (!isBiometricScanned || !currentChallengeId) {
+          // Prompt Touch ID directly upon clicking Sign & Dispatch
           btn.innerHTML = '👆 Awaiting macOS Touch ID...';
           btn.disabled = true;
           const ok = await triggerNativeTouchID();
@@ -1376,7 +1435,6 @@
           }
         }
         btn.innerHTML = '🔐 Enclave Sign-off Verified...';
-        payload.auth_method = 'BIOMETRIC_TOUCH_ID';
       } else {
         const pin = document.getElementById('modalPinInput').value.trim();
         if (!pin) {
@@ -1387,11 +1445,33 @@
           alertBox.innerText = '⚠️ Please enter your 4-digit Supervisor Hardware PIN.';
           return;
         }
+
+        // Fetch challenge for PIN if not already fetched
+        if (!currentChallengeId) {
+          try {
+            const actId = currentEnvelope ? currentEnvelope.action_id : '';
+            const chalRes = await fetch(`/api/auth/challenge?action_id=${encodeURIComponent(actId)}`);
+            const chalData = await chalRes.json();
+            currentChallengeId = chalData.challenge_id;
+            currentChallengeNonce = chalData.challenge_nonce;
+          } catch (e) {
+            console.warn("Could not fetch server challenge:", e);
+          }
+        }
+
         btn.innerHTML = '🔑 Validating Hardware PIN...';
         btn.disabled = true;
-        payload.auth_method = 'HARDWARE_PIN';
-        payload.pin_code = pin;
       }
+
+      let payload = {
+        supervisor: supervisor,
+        token_id: 'YK-FIDO2-84920A',
+        action_id: currentEnvelope ? currentEnvelope.action_id : null,
+        challenge_id: currentChallengeId,
+        challenge_nonce: currentChallengeNonce,
+        auth_method: selectedAuthMethod === 'bio' ? 'BIOMETRIC_TOUCH_ID' : 'HARDWARE_PIN',
+        pin_code: selectedAuthMethod === 'pin' ? document.getElementById('modalPinInput').value.trim() : undefined
+      };
 
       try {
         const res = await fetch('/api/approve-action', {

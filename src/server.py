@@ -16,7 +16,14 @@ if str(PROJECT_ROOT) not in sys.path:
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
 
-from src.llama_stack.client import LlamaStackClientAdapter
+from src.llama_stack.client import (
+    LlamaStackClientAdapter,
+    MetaQuotaExceededError,
+    MetaConnectionError,
+    MetaAuthenticationError,
+    MetaTimeoutError,
+    MetaAPIError,
+)
 from src.agents.orchestrator import SentinelMasterOrchestrator
 from src.protocol.supervised_action import SupervisedActionEngine, SupervisedActionEnvelope
 
@@ -60,6 +67,14 @@ def process_incident(request: TelemetryInspectionRequest):
             contract_data=request.contract_data
         )
         return envelope
+    except MetaQuotaExceededError as e:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+    except MetaAuthenticationError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    except MetaConnectionError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+    except MetaTimeoutError as e:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
