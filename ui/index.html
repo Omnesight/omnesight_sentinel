@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omnesight Sentinel </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      /* Topbar: Bleu de nuit */
+      --header-bg: #070d1e;
+      --header-bg-gradient: linear-gradient(90deg, #070e22 0%, #0c1836 50%, #070e22 100%);
+      --header-border: rgba(255, 255, 255, 0.12);
+      
+      /* Content background: White smoothly fading to slate-gray */
+      --content-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 25%, #f1f5f9 65%, #e2e8f0 100%);
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+      
+      /* Typography */
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-sub: #334155;
+      
+      /* Color Accents */
+      --accent-cyan: #0284c7;
+      --accent-cyan-light: #0ea5e9;
+      --accent-emerald: #10b981;
+      --accent-emerald-dark: #059669;
+      --accent-coral: #e11d48;
+      --accent-amber: #d97706;
+      --accent-indigo: #4f46e5;
+      
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--content-bg);
+      background-attachment: fixed;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.85em;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Top Navigation Bar — Bleu de nuit */
+    header {
+      border-bottom: 1px solid var(--header-border);
+      background: var(--header-bg-gradient);
+      box-shadow: 0 4px 20px rgba(7, 13, 30, 0.35);
+      backdrop-filter: blur(12px);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #06b6d4, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: white;
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.35);
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    .brand-sub {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-badges {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--header-border);
+      background: rgba(255, 255, 255, 0.06);
+      color: #f1f5f9;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .badge-meta {
+      border-color: rgba(6, 182, 212, 0.4);
+      background: rgba(6, 182, 212, 0.12);
+      color: #38bdf8;
+    }
+
+    .badge-meta .badge-dot {
+      background: #06b6d4;
+      box-shadow: 0 0 8px #06b6d4;
+    }
+
+    .header-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateY(-1px);
+    }
+
+    /* Main Dashboard Grid */
+    main {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      display: grid;
+      grid-template-columns: 340px 1fr 380px;
+      gap: 1.5rem;
+      max-width: 1800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 0.5rem;
+    }
+
+    /* Left Column: Physical & Contractual Ingestion */
+    .metric-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.85rem;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+
+    .val-critical {
+      color: var(--accent-coral);
+    }
+
+    .val-warning {
+      color: var(--accent-amber);
+    }
+
+    .val-ok {
+      color: var(--accent-emerald-dark);
+    }
+
+    .thermal-box {
+      border: 1px dashed rgba(225, 29, 72, 0.4);
+      background: rgba(225, 29, 72, 0.04);
+      border-radius: 8px;
+      padding: 0.85rem;
+    }
+
+    /* Center Column: Multi-Agent Reasoning */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+    }
+
+    .timeline-step {
+      background: #f8fafc;
+      border: 1px solid var(--card-border);
+      border-left: 3px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .timeline-step.active {
+      border-color: #bae6fd;
+      border-left: 3px solid var(--accent-cyan);
+      background: #f0f9ff;
+    }
+
+    .timeline-step.approved {
+      border-color: #bbf7d0;
+      border-left: 3px solid var(--accent-emerald);
+      background: #f0fdf4;
+    }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .step-model {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      background: #e2e8f0;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .step-body {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    /* Right Column: Supervised Action Protocol */
+    .envelope-box {
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.05);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .hash-field {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      background: #070d1e;
+      padding: 0.55rem 0.65rem;
+      border-radius: 6px;
+      word-break: break-all;
+      color: #38bdf8;
+      border: 1px solid rgba(15, 23, 42, 0.6);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .supervisor-card {
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+      font-family: var(--font-sans);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: white;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+    }
+
+    .btn-action:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .btn-danger {
+      background: #fff1f2;
+      border: 1px solid #fca5a5;
+      color: var(--accent-coral);
+    }
+
+    .btn-danger:hover {
+      background: #ffe4e6;
+      border-color: #f87171;
+    }
+
+    .status-pill {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .status-executed {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    .status-tampered {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+
+    .status-idle {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* Footer audit ledger */
+    footer {
+      border-top: 1px solid #cbd5e1;
+      padding: 0.85rem 2rem;
+      background: rgba(241, 245, 249, 0.9);
+      font-size: 0.75rem;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    .ledger-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+    }
+
+    /* Cryptographic Authentication Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 13, 30, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border: 1px solid rgba(7, 13, 30, 0.15);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 530px;
+      box-shadow: 0 25px 60px -10px rgba(7, 13, 30, 0.35), 0 0 30px rgba(2, 132, 199, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes modalScaleUp {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Modal Topbar: Bleu de nuit */
+    .modal-header {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--header-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--header-bg-gradient);
+    }
+
+    .modal-close {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .modal-close:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Modal Body: Blanc qui vire au gris */
+    .modal-body {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      gap: 0.75rem;
+      background: #f1f5f9;
+    }
+
+    .auth-review-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      border-radius: 10px;
+      padding: 0.9rem;
+    }
+
+    .auth-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .auth-option {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .auth-option:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .auth-option.active {
+      border-color: var(--accent-emerald);
+      background: #ffffff;
+      box-shadow: 0 0 0 1px var(--accent-emerald), 0 4px 16px rgba(16, 185, 129, 0.12);
+    }
+
+    /* Interactive Biometric Sensor Pad */
+    .biometric-sensor-pad {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      padding: 1.1rem;
+      background: #f0f9ff;
+      border: 2px dashed rgba(2, 132, 199, 0.4);
+      border-radius: 12px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      margin-top: 0.6rem;
+    }
+
+    .biometric-sensor-pad:hover {
+      border-color: var(--accent-cyan);
+      background: #e0f2fe;
+      transform: translateY(-1px);
+    }
+
+    .biometric-sensor-pad.scanning {
+      border-color: var(--accent-cyan);
+      border-style: solid;
+      background: #e0f2fe;
+      box-shadow: 0 0 25px rgba(2, 132, 199, 0.25);
+    }
+
+    .biometric-sensor-pad.verified {
+      border-color: var(--accent-emerald);
+      border-style: solid;
+      background: #dcfce7;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+    }
+
+    .sensor-laser {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--accent-cyan), 0 0 24px var(--accent-cyan);
+      display: none;
+      animation: laserSweep 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes laserSweep {
+      0% {
+        top: 0%;
+        opacity: 0.5;
+      }
+
+      100% {
+        top: 96%;
+        opacity: 1;
+      }
+    }
+
+    .sensor-progress-bar {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .sensor-progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
+      transition: width 0.05s linear;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">Ω</div>
+      <div>
+        <div class="brand-title">OMNESIGHT SENTINEL</div>
+        <div class="brand-sub">Sovereign Operational Intelligence Runtime</div>
+      </div>
+    </div>
+    <div class="nav-badges">
+      <div class="badge" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.12); color: #ecfdf5;">
+        <span class="badge-dot"
+          style="background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+        <span style="color: #94a3b8; font-size: 0.7rem;">OPERATOR:</span>
+        <strong style="color: #fff;">Malahim Mavoungou (COO)</strong>
+        <span
+          style="font-size: 0.65rem; background: rgba(16, 185, 129, 0.25); color: #34d399; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700; font-family: var(--font-mono);">IEC-62443
+          TIER-1</span>
+      </div>
+      <div class="badge badge-meta">
+        <span class="badge-dot"></span>
+        Meta Model API (Muse Spark 1.3 Active)
+      </div>
+      <div class="badge">
+        <span class="badge-dot" style="background: #10b981;"></span>
+        SHA-256 Protocol Gated
+      </div>
+      <button class="header-btn" onclick="resetState()">
+        ↺ Reset Demo
+      </button>
+    </div>
+  </header>
+
+  <!-- Main View -->
+  <main>
+
+    <!-- Column 1: Telemetry & Ingestion -->
+    <div class="card">
+      <div class="card-title">
+        <span>01 // Ingestion Stream</span>
+        <span id="targetNodeBadge" class="status-pill status-idle">NODE-ESC-04</span>
+      </div>
+
+      <!-- Physical SCADA -->
+      <div class="metric-box">
+        <div style="font-weight: 600; font-size: 0.8rem; margin-bottom: 0.5rem; color: var(--accent-cyan);">
+          Physical SCADA (Escravos-Lagos Pipeline)
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Pressure (Segment 4)</span>
+          <span class="metric-val val-critical" id="scadaPressure">42.1 bar (-43%)</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Mass Flow Rate</span>
+          <span class="metric-val val-critical" id="scadaFlow">310 kg/s (-63%)</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Vibration Frequency</span>
+          <span class="metric-val val-warning" id="scadaVibe">142.5 Hz (High)</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Differential Delta</span>
+          <span class="metric-val val-critical">32.1 bar [ANOMALOUS]</span>
+        </div>
+      </div>
+
+      <!-- Thermal Infrared Metadata -->
+      <div class="thermal-box">
+        <div style="font-weight: 600; font-size: 0.8rem; margin-bottom: 0.4rem; color: var(--accent-coral);">
+          Multimodal Thermal Feed (FLIR-A615)
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Infrared Signature</span>
+          <span class="metric-val val-critical">Thermal Bloom Detected</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Estimated Leak Rate</span>
+          <span class="metric-val val-critical">480 bbl/hour</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Visual Pinpoint</span>
+          <span class="metric-val">Kilometer 42.8 (Subsea Joint)</span>
+        </div>
+      </div>
+
+      <!-- Contract Liability Exposure -->
+      <div class="metric-box">
+        <div style="font-weight: 600; font-size: 0.8rem; margin-bottom: 0.4rem; color: var(--accent-amber);">
+          Contractual Liability (NNPC GSA)
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Contract Type</span>
+          <span class="metric-val">Take-or-Pay GSA 2024-C</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Exposure Rate</span>
+          <span class="metric-val val-critical">$320,000 / hour</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Daily Max Penalty</span>
+          <span class="metric-val val-critical">$1,280,000 USD</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Force Majeure Notice</span>
+          <span class="metric-val val-warning">&lt; 4 Hours Window</span>
+        </div>
+      </div>
+
+      <button id="btnRunDiagnosis" class="btn btn-action" onclick="runDiagnosis()">
+        ⚡ Run Multi-Agent Diagnostic
+      </button>
+    </div>
+
+    <!-- Column 2: Agent Orchestration Timeline -->
+    <div class="card">
+      <div class="card-title">
+        <span>02 // Multi-Agent Reasoning Timeline</span>
+        <span id="runtimeStatus" class="status-pill status-idle">STANDBY</span>
+      </div>
+
+      <div class="timeline">
+        <!-- Step 1: Telemetry Vision Agent -->
+        <div class="timeline-step" id="stepVision">
+          <div class="step-header">
+            <span class="step-name">① TelemetryVisionAgent</span>
+            <span class="step-model">Muse-Spark-1.3 (Vision/SCADA)</span>
+          </div>
+          <div class="step-body" id="textVision">
+            Awaiting multimodal telemetry stream from industrial pipeline nodes.
+          </div>
+        </div>
+
+        <!-- Step 2: Financial Risk Agent -->
+        <div class="timeline-step" id="stepRisk">
+          <div class="step-header">
+            <span class="step-name">② FinancialRiskAgent</span>
+            <span class="step-model">Muse-Spark-1.3 (Take-or-Pay)</span>
+          </div>
+          <div class="step-body" id="textRisk">
+            Awaiting incident confirmation to evaluate contractual liabilities and Take-or-Pay exposure.
+          </div>
+        </div>
+
+        <!-- Step 3: Sentinel Orchestrator Synthesis -->
+        <div class="timeline-step" id="stepOrchestrator">
+          <div class="step-header">
+            <span class="step-name">③ Supervised Action Envelope</span>
+            <span class="step-model">Meta Supervised Protocol</span>
+          </div>
+          <div class="step-body" id="textOrchestrator">
+            Synthesizes multimodal findings into deterministic remediation action under SHA-256 cryptographic seal.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 3: Supervised Action Protocol Cockpit -->
+    <div class="card">
+      <div class="card-title">
+        <span>03 // Human Supervision Protocol</span>
+        <span id="envelopeStatusBadge" class="status-pill status-idle">NO ACTION</span>
+      </div>
+
+      <div class="envelope-box">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent-emerald-dark);">
+          Deterministic Remediation Directive
+        </div>
+        <div id="actionSummary" style="font-size: 0.85rem; line-height: 1.4; color: var(--text-main);">
+          Run the multi-agent diagnostic to synthesize a proposed action.
+        </div>
+
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">
+          Cryptographic Payload Digest (SHA-256):
+        </div>
+        <div class="hash-field" id="payloadHash">
+          e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        </div>
+
+        <div style="font-size: 0.75rem; color: var(--text-muted);">
+          Authorized Supervisor Identity & Session:
+        </div>
+        <div class="supervisor-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Malahim Mavoungou</span>
+            <span
+              style="font-size: 0.65rem; background: rgba(2, 132, 199, 0.1); color: var(--accent-cyan); border: 1px solid rgba(2, 132, 199, 0.25); padding: 0.15rem 0.5rem; border-radius: 4px; font-family: var(--font-mono); font-weight: 700;">COO
+              // SIGNER</span>
+          </div>
+          <div
+            style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+            <span>🔑 Enclave: <code style="color: var(--accent-emerald-dark); font-weight: 600;">YK-FIDO2-84920A</code></span>
+            <span style="color: var(--text-sub); font-weight: 600;">Class-4 SCADA Cleared</span>
+          </div>
+        </div>
+        <input type="hidden" id="supervisorInput" value="Malahim Mavoungou, Chief Operating Officer" />
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: auto;">
+        <button id="btnApprove" class="btn btn-primary" disabled onclick="openAuthModal()">
+          ✓ Approve & Execute Remediation
+        </button>
+
+        <button id="btnTamper" class="btn btn-danger" onclick="testTamper()">
+          🛡️ Test Tamper Protection (SHA-256 Check)
+        </button>
+      </div>
+
+      <div id="auditFeedback"
+        style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted); line-height: 1.4;">
+        Awaiting operator review. No actions can be triggered without valid signature.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Ledger Footer -->
+  <footer>
+    <div class="ledger-status">
+      <span>IMMUTABLE AUDIT LEDGER:</span>
+      <span id="ledgerProof" style="color: var(--accent-cyan);">ACTIVE // ZERO DRIFT VERIFIED</span>
+    </div>
+    <div>Omnesight Sentinel © 2026 — Meta Global AI Developer Program</div>
+  </footer>
+
+  <!-- Modal: Multi-Factor Cryptographic Authorization -->
+  <div id="authModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div
+            style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+            🔐
+          </div>
+          <div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: #fff;">Cryptographic Authorization Gateway</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Sovereign Operator Gating // Class-4 Pipeline Actuation</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Review Envelope Digest -->
+        <div class="auth-review-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <span
+              style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; font-weight: 700;">Sealed
+              Directive</span>
+            <span class="status-pill status-pending" style="font-size: 0.65rem;">Awaiting Signature</span>
+          </div>
+          <div style="font-weight: 700; font-size: 0.85rem; color: var(--accent-cyan);" id="modalDirective">
+            THROTTLE_INFLOW_TO_65_PERCENT (Escravos-Lagos Valve #12)
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">
+            SHA-256 Payload Seal:
+          </div>
+          <div class="hash-field" id="modalDigest"
+            style="font-size: 0.68rem; margin-top: 0.2rem;">
+            d9ff8f9aa4b6210a9facce8e5e16cc8c963d8fdff3870585880934ec07fb4065
+          </div>
+        </div>
+
+        <!-- Supervisor Verification Factors -->
+        <div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.6rem;">
+            Select Verification Factor:
+          </div>
+
+          <div class="auth-options">
+            <div class="auth-option active" id="optBio" onclick="selectAuthMethod('bio')">
+              <div style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Biometric TouchID / Secure Enclave</span>
+                  <span id="bioStatusBadge"
+                    style="font-size: 0.65rem; background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 0.15rem 0.5rem; border-radius: 4px; font-family: var(--font-mono); font-weight: 700;">SCAN REQUIRED</span>
+                </div>
+
+                <!-- Native WebAuthn Touch ID Trigger Pad -->
+                <div class="biometric-sensor-pad" id="sensorPad" onclick="triggerNativeTouchID(event)">
+                  <div style="font-size: 2.2rem;" id="bioIcon">👆</div>
+                  <div id="sensorLabel" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">
+                    Click to Trigger macOS Touch ID Prompt
+                  </div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);" id="sensorSubLabel">
+                    Prompts native Apple Secure Enclave passkey sheet (just like Google)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="auth-option" id="optPin" onclick="selectAuthMethod('pin')">
+              <div style="font-size: 1.4rem;">🔑</div>
+              <div style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 700; font-size: 0.82rem; color: var(--text-main);">Supervisor Hardware PIN</span>
+                  <span style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">Hardware Token Gated</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted);">Enter 4-digit physical token security PIN</div>
+                <input type="password" id="modalPinInput" placeholder="••••" maxlength="6"
+                  style="display: none; margin-top: 0.4rem; width: 100%; padding: 0.5rem 0.75rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; color: var(--text-main); font-family: var(--font-mono); font-size: 0.85rem;" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="modalAlert"
+          style="display: none; font-size: 0.75rem; padding: 0.6rem; border-radius: 6px; font-family: var(--font-mono);">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAuthModal()" style="width: auto; padding: 0.6rem 1.25rem;">
+          Cancel
+        </button>
+        <button id="btnSignAuthorize" class="btn btn-primary" onclick="submitAuthorizedSignOff()" style="flex: 1;">
+          🔐 Sign & Dispatch with Hardware Token
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Enforce http://localhost:8765 so Chrome permits native macOS Touch ID WebAuthn passkeys
+    if (window.location.hostname === '127.0.0.1') {
+      window.location.replace(window.location.href.replace('127.0.0.1', 'localhost'));
+    }
+
+    async function fetchState() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        updateUI(data);
+      } catch (err) {
+        console.error('Error fetching state:', err);
+      }
+    }
+
+    function updateUI(state) {
+      const status = state.status;
+      const env = state.envelope;
+
+      const runtimeStatus = document.getElementById('runtimeStatus');
+      const envelopeBadge = document.getElementById('envelopeStatusBadge');
+      const btnApprove = document.getElementById('btnApprove');
+      const btnTamper = document.getElementById('btnTamper');
+      const btnRun = document.getElementById('btnRunDiagnosis');
+
+      if (status === 'IDLE') {
+        runtimeStatus.className = 'status-pill status-idle';
+        runtimeStatus.innerText = 'STANDBY';
+        envelopeBadge.className = 'status-pill status-idle';
+        envelopeBadge.innerText = 'NO ACTION';
+        btnApprove.disabled = true;
+        btnTamper.disabled = false;
+        btnRun.disabled = false;
+        document.getElementById('stepVision').className = 'timeline-step';
+        document.getElementById('stepRisk').className = 'timeline-step';
+        document.getElementById('stepOrchestrator').className = 'timeline-step';
+      }
+      else if (status === 'PENDING_APPROVAL' && env) {
+        runtimeStatus.className = 'status-pill status-pending';
+        runtimeStatus.innerText = 'REQUIRES C-LEVEL SIGNATURE';
+        envelopeBadge.className = 'status-pill status-pending';
+        envelopeBadge.innerText = 'AWAITING APPROVAL';
+        btnApprove.disabled = false;
+        btnTamper.disabled = false;
+        btnRun.disabled = true;
+
+        // Populate steps
+        document.getElementById('stepVision').className = 'timeline-step active';
+        document.getElementById('textVision').innerHTML = `
+          <strong>CRITICAL RUPTURE CONFIRMED</strong><br>
+          FLIR sensor identified acute thermal flare at Km 42.8. Pin-hole fissure confirmed under subsea joint.
+          Confidence: <strong>0.94</strong>. Immediate containment directive advised.
+        `;
+
+        document.getElementById('stepRisk').className = 'timeline-step active';
+        document.getElementById('textRisk').innerHTML = `
+          <strong>LIABILITY CLASSIFICATION: CRITICAL</strong><br>
+          Take-or-Pay penalties active at $320,000/hr. Notice window expires in 4 hours.<br>
+          Recommendation: Dispatch official <em>Force Majeure</em> notification per Article 14.2 within 180 minutes.
+        `;
+
+        const pAction = env.proposed_action || {};
+        const pParams = pAction.parameters || {};
+        const vId = pParams.valve_id || pAction.target || 'ELPS-VALVE-12';
+        const rLine = pParams.reroute_line || 'WEST-GRID-BYPASS-02';
+        const aType = pAction.type || 'THROTTLE_INFLOW_TO_65_PERCENT';
+
+        document.getElementById('stepOrchestrator').className = 'timeline-step active';
+        document.getElementById('textOrchestrator').innerHTML = `
+          <strong>REMEDIATION DIRECTIVE COMPILED</strong><br>
+          Action: <code>${aType}</code><br>
+          Target: <code>${vId}</code> | Bypass: <code>${rLine}</code><br>
+          Payload sealed with SHA-256 hash. Execution locked until operator signs.
+        `;
+
+        document.getElementById('actionSummary').innerHTML = `
+          <strong>${aType}</strong><br>
+          Close Valve <code>${vId}</code> & Reroute to <code>${rLine}</code> to stop leak and cap Take-or-Pay liability.
+        `;
+        document.getElementById('payloadHash').innerText = env.payload_hash || 'SHA-256 PENDING';
+        document.getElementById('auditFeedback').innerHTML = `<span style="color: var(--accent-amber); font-weight: 600;">⚠️ Execution halted: Awaiting signature from ${document.getElementById('supervisorInput').value}</span>`;
+      }
+      else if (status === 'EXECUTED' && env) {
+        runtimeStatus.className = 'status-pill status-executed';
+        runtimeStatus.innerText = 'EXECUTED & SEALED';
+        envelopeBadge.className = 'status-pill status-executed';
+        envelopeBadge.innerText = 'IMMUTABLE SUCCESS';
+        btnApprove.disabled = true;
+        btnTamper.disabled = false;
+        btnRun.disabled = false;
+
+        document.getElementById('stepVision').className = 'timeline-step approved';
+        document.getElementById('stepRisk').className = 'timeline-step approved';
+        document.getElementById('stepOrchestrator').className = 'timeline-step approved';
+
+        document.getElementById('auditFeedback').innerHTML = `
+          <span style="color: var(--accent-emerald-dark); font-weight: 700;">✓ Action Executed Successfully</span><br>
+          <span style="color: var(--text-main);">Signer: <strong>${env.supervisor_identity}</strong></span><br>
+          <span style="color: var(--text-muted);">Timestamp: ${env.executed_at}</span><br>
+          <span style="color: var(--text-muted);">Cryptographic Proof: <code>${env.audit_proof.substring(0, 32)}...</code></span>
+        `;
+        document.getElementById('ledgerProof').innerText = `SEALED // TX: ${env.audit_proof.substring(0, 16)}...`;
+      }
+      else if (status === 'TAMPER_DETECTED' && env) {
+        runtimeStatus.className = 'status-pill status-tampered';
+        runtimeStatus.innerText = 'TAMPER DETECTED';
+        envelopeBadge.className = 'status-pill status-tampered';
+        envelopeBadge.innerText = 'EXECUTION REJECTED';
+        btnApprove.disabled = true;
+        btnTamper.disabled = false;
+        btnRun.disabled = false;
+
+        document.getElementById('stepVision').className = 'timeline-step approved';
+        document.getElementById('stepRisk').className = 'timeline-step approved';
+        document.getElementById('stepOrchestrator').className = 'timeline-step active';
+        document.getElementById('textOrchestrator').innerHTML = `
+          <strong style="color: var(--accent-coral);">CRITICAL SECURITY VIOLATION</strong><br>
+          An unauthorized actor attempted to alter parameters behind the SHA-256 seal.<br>
+          Cryptographic Digest Mismatch: <strong>REJECTED</strong>. Zero pipeline impact.
+        `;
+
+        document.getElementById('actionSummary').innerHTML = `
+          <strong style="color: var(--accent-coral);">ATTACK ABORTED BY PROTOCOL</strong><br>
+          Tampered payload was intercepted prior to execution. Physical SCADA valves remained locked in safe state.
+        `;
+
+        document.getElementById('auditFeedback').innerHTML = `
+          <span style="color: var(--accent-coral); font-weight: 700;">🚨 SECURITY BREACH INTERCEPTED & BLOCKED!</span><br>
+          <span style="color: var(--text-sub);">Payload SHA-256 hash mismatch! Action parameters were maliciously altered.</span><br>
+          <span style="color: var(--accent-coral); font-weight: 600;">The Supervised Action Protocol rejected execution immediately.</span>
+        `;
+        document.getElementById('ledgerProof').innerText = 'TAMPER BLOCKED // ZERO EXECUTION';
+      }
+    }
+
+    async function runDiagnosis() {
+      const btn = document.getElementById('btnRunDiagnosis');
+      btn.innerText = 'Analyzing with Meta Llama 3.2...';
+      try {
+        const res = await fetch('/api/run-diagnosis', { method: 'POST' });
+        const data = await res.json();
+        updateUI(data.state);
+      } finally {
+        btn.innerText = '⚡ Run Multi-Agent Diagnostic';
+      }
+    }
+
+    let selectedAuthMethod = 'bio';
+    let isBiometricScanned = false;
+
+    function openAuthModal() {
+      const modal = document.getElementById('authModal');
+      const hash = document.getElementById('payloadHash').innerText;
+      document.getElementById('modalDigest').innerText = hash;
+      const summaryText = document.getElementById('actionSummary').innerText;
+      document.getElementById('modalDirective').innerText = summaryText || 'THROTTLE_INFLOW_TO_65_PERCENT (Escravos-Lagos Valve #12)';
+      const alertBox = document.getElementById('modalAlert');
+      alertBox.style.display = 'none';
+      document.getElementById('modalPinInput').value = '';
+
+      // Reset biometric state
+      isBiometricScanned = false;
+
+      const badge = document.getElementById('bioStatusBadge');
+      if (badge) {
+        badge.style.background = 'rgba(245, 158, 11, 0.2)';
+        badge.style.color = 'var(--accent-amber)';
+        badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        badge.innerText = 'SCAN REQUIRED';
+      }
+      const pad = document.getElementById('sensorPad');
+      if (pad) pad.className = 'biometric-sensor-pad';
+      const label = document.getElementById('sensorLabel');
+      if (label) {
+        label.innerText = 'Click to Trigger macOS Touch ID Prompt';
+        label.style.color = 'var(--accent-cyan)';
+      }
+      const sub = document.getElementById('sensorSubLabel');
+      if (sub) sub.innerText = 'Prompts native Apple Secure Enclave passkey sheet (just like Google)';
+      const bioIcon = document.getElementById('bioIcon');
+      if (bioIcon) bioIcon.innerText = '👆';
+
+      selectAuthMethod('bio');
+      modal.style.display = 'flex';
+    }
+
+    async function triggerNativeTouchID(e) {
+      if (e) e.stopPropagation();
+      const alertBox = document.getElementById('modalAlert');
+      alertBox.style.display = 'none';
+
+      // Enforce localhost domain requirement for WebAuthn in Chrome
+      if (window.location.hostname === '127.0.0.1') {
+        alertBox.style.display = 'block';
+        alertBox.style.background = 'rgba(245, 158, 11, 0.15)';
+        alertBox.style.color = 'var(--accent-amber)';
+        alertBox.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+        alertBox.innerHTML = '⚠️ Switching to <b>localhost</b> origin for Chrome Passkey / Touch ID support...';
+        setTimeout(() => {
+          window.location.replace(window.location.href.replace('127.0.0.1', 'localhost'));
+        }, 500);
+        return false;
+      }
+
+      const badge = document.getElementById('bioStatusBadge');
+      const label = document.getElementById('sensorLabel');
+      const sub = document.getElementById('sensorSubLabel');
+      const bioIcon = document.getElementById('bioIcon');
+      const pad = document.getElementById('sensorPad');
+
+      pad.className = 'biometric-sensor-pad scanning';
+      label.innerText = '👆 Touch ID Sheet Open: Scan your finger on Mac...';
+      label.style.color = 'var(--accent-cyan)';
+      sub.innerText = 'Awaiting Apple Secure Enclave hardware verification...';
+      badge.innerText = 'PROMPTING...';
+
+      try {
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        const userId = new Uint8Array(16);
+        window.crypto.getRandomValues(userId);
+
+        let credential = null;
+        const isEnrolled = localStorage.getItem('omnesight_touchid_enrolled') === 'true';
+
+        // 1. If passkey is already enrolled on this Mac, prompt direct Touch ID Sign-in
+        if (isEnrolled && navigator.credentials.get) {
+          try {
+            credential = await navigator.credentials.get({
+              publicKey: {
+                challenge: challenge,
+                rpId: "localhost",
+                userVerification: "required"
+              }
+            });
+          } catch (getErr) {
+            console.log("Passkey get dismissed or missing, trying enrollment:", getErr);
+          }
+        }
+
+        // 2. If first time or not yet enrolled, prompt initial passkey creation in Apple Secure Enclave
+        if (!credential) {
+          credential = await navigator.credentials.create({
+            publicKey: {
+              challenge: challenge,
+              rp: {
+                id: "localhost",
+                name: "Omnesight Sentinel Gateway"
+              },
+              user: {
+                id: userId,
+                name: "malahim@omnesight.com",
+                displayName: "Malahim Mavoungou (COO)"
+              },
+              pubKeyCredParams: [
+                { type: "public-key", alg: -7 },   // ES256 (NIST P-256)
+                { type: "public-key", alg: -257 }  // RS256
+              ],
+              authenticatorSelection: {
+                authenticatorAttachment: "platform", // Direct macOS Touch ID / Secure Enclave
+                userVerification: "required",
+                residentKey: "preferred"
+              },
+              timeout: 60000,
+              attestation: "none"
+            }
+          });
+
+          if (credential) {
+            localStorage.setItem('omnesight_touchid_enrolled', 'true');
+          }
+        }
+
+        if (credential) {
+          isBiometricScanned = true;
+          pad.className = 'biometric-sensor-pad verified';
+          bioIcon.innerText = '✅';
+          label.innerText = '✓ Touch ID Verified (Apple Secure Enclave)';
+          label.style.color = 'var(--accent-emerald)';
+          sub.innerText = `Hardware Passkey Attested [ID: ${credential.id.slice(0, 16)}...]`;
+
+          badge.style.background = 'rgba(16, 185, 129, 0.2)';
+          badge.style.color = 'var(--accent-emerald)';
+          badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+          badge.innerText = '✓ TOUCH ID VERIFIED';
+
+          const btn = document.getElementById('btnSignAuthorize');
+          btn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+          return true;
+        }
+      } catch (err) {
+        console.warn("WebAuthn Touch ID interaction:", err);
+        isBiometricScanned = false;
+        pad.className = 'biometric-sensor-pad';
+        bioIcon.innerText = '👆';
+        label.innerText = 'Click to Trigger macOS Touch ID Prompt';
+        label.style.color = 'var(--accent-cyan)';
+
+        if (err.name === 'NotAllowedError') {
+          sub.innerText = '⚠️ Touch ID scan canceled or dismissed. Click to retry.';
+          badge.style.background = 'rgba(244, 63, 94, 0.2)';
+          badge.style.color = 'var(--accent-coral)';
+          badge.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+          badge.innerText = 'SCAN CANCELED';
+        } else {
+          sub.innerText = `${err.name}: ${err.message}`;
+          badge.style.background = 'rgba(244, 63, 94, 0.2)';
+          badge.style.color = 'var(--accent-coral)';
+          badge.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+          badge.innerText = 'SCAN FAILED';
+        }
+        return false;
+      }
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').style.display = 'none';
+    }
+
+    function selectAuthMethod(method) {
+      selectedAuthMethod = method;
+      const optBio = document.getElementById('optBio');
+      const optPin = document.getElementById('optPin');
+      const pinInput = document.getElementById('modalPinInput');
+      if (method === 'bio') {
+        optBio.className = 'auth-option active';
+        optPin.className = 'auth-option';
+        pinInput.style.display = 'none';
+      } else {
+        optPin.className = 'auth-option active';
+        optBio.className = 'auth-option';
+        pinInput.style.display = 'block';
+        pinInput.focus();
+      }
+    }
+
+    async function submitAuthorizedSignOff() {
+      const supervisor = document.getElementById('supervisorInput').value;
+      const alertBox = document.getElementById('modalAlert');
+      const btn = document.getElementById('btnSignAuthorize');
+      const prevText = btn.innerHTML;
+
+      let payload = {
+        supervisor: supervisor,
+        token_id: 'YK-FIDO2-84920A'
+      };
+
+      if (selectedAuthMethod === 'bio') {
+        if (!isBiometricScanned) {
+          // Immediately prompt Touch ID directly upon clicking Sign & Dispatch
+          btn.innerHTML = '👆 Awaiting macOS Touch ID...';
+          btn.disabled = true;
+          const ok = await triggerNativeTouchID();
+          btn.disabled = false;
+          btn.innerHTML = prevText;
+          if (!ok || !isBiometricScanned) {
+            return;
+          }
+        }
+        btn.innerHTML = '🔐 Enclave Sign-off Verified...';
+        payload.auth_method = 'BIOMETRIC_TOUCH_ID';
+      } else {
+        const pin = document.getElementById('modalPinInput').value.trim();
+        if (!pin) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = 'rgba(244, 63, 94, 0.15)';
+          alertBox.style.color = 'var(--accent-coral)';
+          alertBox.style.border = '1px solid rgba(244, 63, 94, 0.3)';
+          alertBox.innerText = '⚠️ Please enter your 4-digit Supervisor Hardware PIN.';
+          return;
+        }
+        btn.innerHTML = '🔑 Validating Hardware PIN...';
+        btn.disabled = true;
+        payload.auth_method = 'HARDWARE_PIN';
+        payload.pin_code = pin;
+      }
+
+      try {
+        const res = await fetch('/api/approve-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.status === 403 || data.status === 'AUTH_FAILED') {
+          alertBox.style.display = 'block';
+          alertBox.style.background = 'rgba(244, 63, 94, 0.15)';
+          alertBox.style.color = 'var(--accent-coral)';
+          alertBox.style.border = '1px solid rgba(244, 63, 94, 0.3)';
+          alertBox.innerText = data.error || '🚨 AUTHENTICATION REJECTED: Invalid credentials.';
+          return;
+        }
+
+        closeAuthModal();
+        updateUI(data.state);
+      } catch (err) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = 'rgba(244, 63, 94, 0.15)';
+        alertBox.style.color = 'var(--accent-coral)';
+        alertBox.innerText = 'Network error during authorization.';
+      } finally {
+        btn.innerHTML = prevText;
+        btn.disabled = false;
+      }
+    }
+
+    async function testTamper() {
+      const btn = document.getElementById('btnTamper');
+      const prev = btn.innerText;
+      btn.innerText = '🛡️ Testing SHA-256 Rejection...';
+      try {
+        const res = await fetch('/api/tamper-test', { method: 'POST' });
+        const data = await res.json();
+        updateUI(data.state);
+      } finally {
+        btn.innerText = prev;
+      }
+    }
+
+    async function resetState() {
+      const res = await fetch('/api/reset');
+      const data = await res.json();
+      updateUI(data.state);
+    }
+
+    // Initial polling on load
+    fetchState();
+  </script>
+</body>
+
+</html>

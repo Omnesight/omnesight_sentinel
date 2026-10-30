@@ -1,0 +1,11 @@
+{
+  "contract_id": "GSA-NNPC-ELPS-2024-8841",
+  "counterparty": "Nigerian National Petroleum Company Limited (NNPC) / Gas Aggregation",
+  "contract_type": "Take-or-Pay Long-Term Gas Transportation & Supply",
+  "minimum_daily_contract_quantity_mmbtu": 180000,
+  "take_or_pay_penalty_rate_usd_per_mmbtu": 4.85,
+  "unplanned_curtailment_hourly_damages_usd": 340000.0,
+  "active_standby_letter_of_credit_usd": 15000000.0,
+  "sblc_issuing_bank": "Standard Chartered Bank Nigeria / Zenith Bank Plc",
+  "force_majeure_notice_window_hours": 1.0
+}

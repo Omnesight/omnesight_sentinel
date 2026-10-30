@@ -148,30 +148,79 @@ class SupervisedActionEngine:
         envelope: SupervisedActionEnvelope,
         supervisor_identity: str,
     ) -> SupervisedActionEnvelope:
-        # Integrity check: verify that payload hasn't been tampered with
+        # 1. Zero-Trust Identity Verification
+        clean_identity = str(supervisor_identity or "").strip()
+        if not clean_identity or clean_identity.upper() in ("ANONYMOUS", "NONE", "NULL", "UNKNOWN"):
+            envelope.status = ActionStatus.REJECTED
+            envelope.execution_result = {
+                "error": "Zero-Trust Identity Violation: Valid supervisor identity is mandatory for sign-off.",
+                "verified": False,
+                "security_code": "ERR_ZERO_TRUST_IDENTITY_MISSING",
+            }
+            return envelope
+
+        # 2. Anti-Replay & Lifecycle State Machine Verification
+        if envelope.status in (ActionStatus.EXECUTED, ActionStatus.REJECTED, ActionStatus.TAMPERED, ActionStatus.ROLLED_BACK):
+            envelope.status = ActionStatus.REJECTED
+            envelope.execution_result = {
+                "error": f"Replay Attack Blocked: Envelope {envelope.payload.action_id} has already been finalized ({envelope.status}).",
+                "verified": False,
+                "security_code": "ERR_REPLAY_ATTACK_DETECTED",
+            }
+            return envelope
+
+        # 3. Cryptographic Integrity Check: verify that payload hasn't been tampered with
         current_hash = cls.compute_payload_hash(envelope.payload)
         if current_hash != envelope.payload_sha256:
             envelope.status = ActionStatus.REJECTED
             envelope.execution_result = {
                 "error": "Cryptographic mismatch! Payload was modified after agent formulation.",
                 "verified": False,
+                "security_code": "ERR_SHA256_TAMPER_DETECTED",
+                "expected_hash": envelope.payload_sha256,
+                "computed_hash": current_hash,
             }
             return envelope
 
         envelope.status = ActionStatus.APPROVED
-        envelope.supervisor_identity = supervisor_identity
+        envelope.supervisor_identity = clean_identity
         envelope.approval_timestamp = time.time()
 
-        # Deterministic simulation/execution
+        # 4. Deterministic simulation/execution
         execution_ack = {
             "target": envelope.payload.target_system,
             "executed_command": envelope.payload.command,
             "params_applied": envelope.payload.parameters,
             "execution_status": "SUCCESS",
+            "verified": True,
             "settlement_time_ms": 14.8,
             "audit_ledger_block": f"block_0x{current_hash[:16]}",
         }
         envelope.status = ActionStatus.EXECUTED
         envelope.execution_result = execution_ack
-        envelope.audit_signature = f"HMAC_SIGNED_{supervisor_identity.upper()}_{int(time.time())}"
+        envelope.audit_signature = f"HMAC_SIGNED_{clean_identity.upper()}_{int(time.time())}"
+        return envelope
+
+    @classmethod
+    def rollback_action(
+        cls,
+        envelope: SupervisedActionEnvelope,
+        supervisor_identity: str,
+    ) -> SupervisedActionEnvelope:
+        """
+        Deterministically rolls back an executed action if reversibility is supported.
+        """
+        if envelope.status != ActionStatus.EXECUTED:
+            raise ValueError(f"Cannot rollback action in state {envelope.status}; must be EXECUTED.")
+        if not envelope.payload.reversibility or not envelope.payload.rollback_command:
+            raise ValueError(f"Action {envelope.payload.action_id} is marked non-reversible.")
+
+        envelope.status = ActionStatus.ROLLED_BACK
+        envelope.execution_result = {
+            "target": envelope.payload.target_system,
+            "executed_command": envelope.payload.rollback_command,
+            "params_applied": envelope.payload.rollback_parameters or {},
+            "execution_status": "ROLLED_BACK_SAFE",
+            "authorized_by": supervisor_identity,
+        }
         return envelope
